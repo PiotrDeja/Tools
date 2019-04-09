@@ -9,17 +9,17 @@ public enum ColliderType
 
 public class ColliderDescriptor : MonoBehaviour
 {
-    public System.Action<Collider> triggerEntered;
-    public System.Action<Collider> triggerExited;
+    public System.Action<Collider, ColliderType> triggerEntered;
+    public System.Action<Collider ColliderType> triggerExited;
     public ColliderType type;
 
     void OnTriggerEnter(Collider col)
     {
-        if (triggerEntered != null) triggerEntered(col);      
+        if (triggerEntered != null) triggerEntered(col, type);      
     }
 
     void OnTriggerExit(Collider col)
     {
-        if (triggerExited != null) triggerExited(col);     
+        if (triggerExited != null) triggerExited(col, type);     
     }
 }
