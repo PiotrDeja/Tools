@@ -1,0 +1,328 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+
+public class AdditionaMenuCommands : MonoBehaviour
+{
+
+    // Set null parent
+
+    [MenuItem("Tools/Transform/Set Null Parent %#&q")]
+    static void SetNulllParent ()
+    {
+
+        if (Selection.activeGameObject == null)
+            return;
+
+        Transform t = Selection.activeGameObject.transform;
+        t.parent = null;
+        t.SetSiblingIndex(0);
+ 
+    }
+
+    // Align with ground
+
+    [MenuItem("Tools/Transform/Align With Ground (Mesh) %g")]
+    static void AlignWithGround()
+    {
+
+        if (Selection.activeGameObject == null)
+            return;
+
+        Transform t = Selection.activeGameObject.transform;
+        RaycastHit hit;
+        if (Physics.Raycast(t.position, -Vector3.up, out hit))
+        {
+            t.position = hit.point;
+        }
+    }
+
+    // Toggle View Perspective / Ortographic
+
+    [MenuItem("Tools/View/Toggle View (Perspective or Ortographic) %_1")]
+    static public void ToggleViewTypeOrtoOrPerspective()
+    {
+        SceneView.lastActiveSceneView.orthographic = !SceneView.lastActiveSceneView.orthographic;
+        SceneView.lastActiveSceneView.Repaint();
+    }
+
+
+    // Create a group from selection
+
+    private static double renameDelay;
+    private static bool sameParent;
+
+    [MenuItem("Tools/Transform/Create a group from selection %#g")]
+    static public void CreateGroupFromSelection()
+    {
+        GameObject[] selectedObjects = Selection.gameObjects;
+        if (selectedObjects.Length == 0) return;
+
+        GameObject newGroup = new GameObject("UNNAMED GROUP", typeof(SelectionGroup));
+        Vector3 center = Vector3.zero;
+        for (int i = 0; i < selectedObjects.Length; i++)
+        {
+            center += selectedObjects[i].transform.position;
+        }
+        center = center / selectedObjects.Length;
+
+        newGroup.transform.position = center;
+
+        Transform tempSameParent = selectedObjects[0].transform.parent;
+        sameParent = true;
+
+        for (int i = 0; i < selectedObjects.Length; i++)
+        {
+            sameParent &= selectedObjects[i].transform.parent == tempSameParent;
+            selectedObjects[i].transform.SetParent(newGroup.transform);
+        }
+
+        if (sameParent)
+        {
+            newGroup.transform.SetParent(tempSameParent);
+        }
+
+        EditingManager em = FindObjectOfType<EditingManager>();
+        em.groups.Add(newGroup.GetComponent<SelectionGroup>());
+        sameParent = false;
+
+        Selection.activeGameObject = newGroup;
+        StartWaitingForRename(em.settings.delayToRename);
+    }
+
+    public static void WaitForRename()
+    {
+        if (EditorApplication.timeSinceStartup >= renameDelay)
+        {
+            EditorApplication.update -= WaitForRename;
+            var type = typeof(EditorWindow).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
+            var hierarchyWindow = EditorWindow.GetWindow(type);
+            var rename = type.GetMethod("RenameGO", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            rename.Invoke(hierarchyWindow, null);
+        }
+    }
+
+    public static void StartWaitingForRename(float delay)
+    {
+        renameDelay = EditorApplication.timeSinceStartup + delay;
+        EditorApplication.update += WaitForRename;
+    }
+
+    // Create a new object and parent selected object to it
+
+    [MenuItem("Tools/Transform/Create GameObject and parent selected to it %#h")]
+    static public void CreateAndParentSelectedGameObject()
+    {
+        EditingManager em = FindObjectOfType<EditingManager>();
+        GameObject selectedChild = Selection.activeGameObject;
+        GameObject newParent = new GameObject();
+
+        Transform tempParent = null;
+        if (selectedChild.transform.parent != null)
+        {
+            tempParent = selectedChild.transform.parent;
+        }
+
+        newParent.transform.SetParent(tempParent);
+
+        newParent.transform.position = selectedChild.transform.position;
+        newParent.transform.localEulerAngles = Vector3.zero;
+        newParent.transform.localScale = Vector3.one;
+
+        selectedChild.transform.SetParent(newParent.transform);
+
+        Selection.activeGameObject = newParent;
+
+        StartWaitingForRename(em.settings.delayToRename);
+    }
+
+    // Create a new object and parent selected object to it
+
+    [MenuItem("Tools/Transform/Toggle child activation %#q")]
+    static public void ToggleChildActive()
+    {
+        Transform t = Selection.activeTransform;
+
+        int active = 0;
+        int disabled = 0;
+
+        for (int i = 0; i < t.childCount; i++)
+        {
+            if (t.GetChild(i).gameObject.activeSelf) active++;
+            else disabled++;
+        }
+
+        bool shouldActivate = !(active >= disabled);
+
+        for (int i = 0; i < t.childCount; i++)
+        {
+            t.GetChild(i).gameObject.SetActive(shouldActivate);
+        }
+    }
+
+
+    // Cameras management
+
+    [MenuItem("Tools/Camera/Create a camera %#j")]
+    static public void CreateCamera()
+    {
+        EditingManager em = FindObjectOfType<EditingManager>();
+        GameObject cameraDummy = Instantiate(em.settings.cameraPrefab);
+        cameraDummy.transform.position = SceneView.lastActiveSceneView.camera.transform.position;
+        Vector3 cea = new Vector3(SceneView.lastActiveSceneView.camera.transform.eulerAngles.x, SceneView.lastActiveSceneView.camera.transform.eulerAngles.y, 0f);
+        cameraDummy.transform.eulerAngles = cea;
+
+        RaycastHit hit;
+        if (Physics.Raycast(cameraDummy.transform.position, -Vector3.up, out hit))
+        {
+            cameraDummy.transform.position = new Vector3(hit.point.x, hit.point.y + em.settings.cameraYOffset, hit.point.z);
+        }
+
+        if (em.settings.camerasParent.childCount > 0)
+        {
+            for (int i = 0; i < em.settings.camerasParent.childCount; i++)
+            {
+                em.settings.camerasParent.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+
+        cameraDummy.transform.SetParent(em.settings.camerasParent);
+        cameraDummy.name = "Camera (" + em.settings.camerasParent.childCount + ")";
+        cameraDummy.transform.localEulerAngles = new Vector3(0f, cameraDummy.transform.localEulerAngles.y, 0f);
+
+        em.currentActiveCamera = cameraDummy;
+        Selection.activeGameObject = cameraDummy;
+    }
+
+    [MenuItem("Tools/Camera/Toggle between cameras %#k")]
+    static public void ToggleBetweenCameras()
+    {
+        EditingManager em = FindObjectOfType<EditingManager>();
+
+        if (em.settings.camerasParent.childCount < 2) return;
+
+        if (em.currentActiveCamera == null)
+        {
+            em.currentActiveCamera = em.settings.camerasParent.GetChild(0).gameObject;
+            return;
+        }
+
+        int index = em.currentActiveCamera.transform.GetSiblingIndex();
+
+        em.currentActiveCamera.SetActive(false);
+
+        if (index + 1 == em.settings.camerasParent.childCount)
+        {
+            em.currentActiveCamera = em.settings.camerasParent.GetChild(0).gameObject;
+        }
+        else
+        {
+            em.currentActiveCamera = em.settings.camerasParent.GetChild(index + 1).gameObject;
+        }
+
+        em.currentActiveCamera.SetActive(true);
+    }
+
+    // View Management
+
+    [MenuItem("Tools/View/3D View &r")]
+    static public void Main3DView()
+    {
+        ChangeView(new Vector3(45f, 45f, 0f), false);
+    }
+
+    [MenuItem("Tools/View/Top View &q")]
+    static public void TopView()
+    {
+        ChangeView(new Vector3(90f, 0f, 0f), true);
+    }
+
+    [MenuItem("Tools/View/Front View &w")]
+    static public void FrontView()
+    {
+        ChangeView(new Vector3(0f, 0f, 0f), true);
+    }
+
+    [MenuItem("Tools/View/Side View &e")]
+    static public void SideView()
+    {
+        ChangeView(new Vector3(0f, 90f, 0f), true);
+    }
+
+    static public void ChangeView(Vector3 rot, bool ort)
+    {
+        SceneView.lastActiveSceneView.orthographic = ort;
+        SceneView.lastActiveSceneView.rotation = Quaternion.Euler(rot);
+        SceneView.lastActiveSceneView.Repaint();
+    }
+
+    // Rotate  (Q - 45, W - 90, E - random)
+
+    // ---- 90 ----
+
+    [MenuItem("Tools/Transform/Rotate/X axis - 90 degrees #_RIGHT")]
+    static public void RotateX_90() { Rotate(Selection.gameObjects, Vector3.right, 90f); }
+
+    [MenuItem("Tools/Transform/Rotate/Y axis - 90 degrees #_UP")]
+    static public void RotateY_90() { Rotate(Selection.gameObjects, Vector3.up, 90f); }
+
+    [MenuItem("Tools/Transform/Rotate/Z axis - 90 degrees #_DOWN")]
+    static public void RotateZ_90() { Rotate(Selection.gameObjects, Vector3.forward, 90f); }
+
+    // ---- 45 ----
+
+    [MenuItem("Tools/Transform/Rotate/X axis - 45 degrees #&_RIGHT")]
+    static public void RotateX_45() { Rotate(Selection.gameObjects, Vector3.right, 45f); }
+
+    [MenuItem("Tools/Transform/Rotate/Y axis - 45 degrees #&_UP")]
+    static public void RotateY_45() { Rotate(Selection.gameObjects, Vector3.up, 45f); }
+
+    [MenuItem("Tools/Transform/Rotate/Z axis - 45 degrees #&_DOWN")]
+    static public void RotateZ_45() { Rotate(Selection.gameObjects, Vector3.forward, 45f); }
+
+    //// ---- 22.5 ----
+
+    //[MenuItem("Tools/Transform/Rotate/X axis - 22.5 degrees # _e _RIGHT")]
+    //static public void RotateX_22() { Rotate(Selection.gameObjects, Vector3.right, 22.5f); }
+
+    //[MenuItem("Tools/Transform/Rotate/Y axis - 22.5 degrees # _e _UP")]
+    //static public void RotateY_22() { Rotate(Selection.gameObjects, Vector3.up, 22.5f); }
+
+    //[MenuItem("Tools/Transform/Rotate/Y axis - 22.5 degrees # _e _DOWN")]
+    //static public void RotateZ_22() { Rotate(Selection.gameObjects, Vector3.forward, 22.5f); }
+
+
+    [MenuItem("Tools/Transform/Rotate/X axis - Random #%_RIGHT")]
+    static public void RotateX_Random() { Rotate(Selection.gameObjects, Vector3.right, Random.Range(0f, 360f)); }
+
+    [MenuItem("Tools/Transform/Rotate/Y axis - Random #%_UP")]
+    static public void RotateY_Random() { Rotate(Selection.gameObjects, Vector3.up, Random.Range(0f, 360f)); }
+
+    [MenuItem("Tools/Transform/Rotate/Z axis - Random #%_DOWN")]
+    static public void RotateZ_Random() { Rotate(Selection.gameObjects, Vector3.forward, Random.Range(0f, 360f)); }
+
+
+
+    static public void Rotate(GameObject[] gos, Vector3 direction, float amount)
+    {
+        GameObject[] selectedObjects = Selection.gameObjects;
+        for (int i = 0; i < selectedObjects.Length; i++)
+        {
+            selectedObjects[i].transform.localRotation = Quaternion.AngleAxis(amount, direction) * selectedObjects[i].transform.localRotation;
+        }
+    }
+
+
+
+
+
+
+    #region HELP
+    //  % (ctrl)
+    //  # (shift)
+    //  & (alt)
+    //  LEFT, RIGHT, UP, DOWN, F1..F12, HOME, END, PGUP, PGDN
+    #endregion
+
+}
