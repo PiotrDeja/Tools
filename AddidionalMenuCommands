@@ -82,11 +82,9 @@ public class AdditionaMenuCommands : MonoBehaviour
         }
 
         EditingManager em = FindObjectOfType<EditingManager>();
-        em.groups.Add(newGroup.GetComponent<SelectionGroup>());
         sameParent = false;
-
         Selection.activeGameObject = newGroup;
-        StartWaitingForRename(em.settings.delayToRename);
+        StartWaitingForRename(em.delayToRename);
     }
 
     public static void WaitForRename()
