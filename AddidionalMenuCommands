@@ -166,7 +166,7 @@ public class AdditionaMenuCommands : MonoBehaviour
     static public void CreateCamera()
     {
         EditingManager em = FindObjectOfType<EditingManager>();
-        GameObject cameraDummy = Instantiate(em.settings.cameraPrefab);
+        GameObject cameraDummy = Instantiate(em.cameraPrefab);
         cameraDummy.transform.position = SceneView.lastActiveSceneView.camera.transform.position;
         Vector3 cea = new Vector3(SceneView.lastActiveSceneView.camera.transform.eulerAngles.x, SceneView.lastActiveSceneView.camera.transform.eulerAngles.y, 0f);
         cameraDummy.transform.eulerAngles = cea;
@@ -174,19 +174,19 @@ public class AdditionaMenuCommands : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(cameraDummy.transform.position, -Vector3.up, out hit))
         {
-            cameraDummy.transform.position = new Vector3(hit.point.x, hit.point.y + em.settings.cameraYOffset, hit.point.z);
+            cameraDummy.transform.position = new Vector3(hit.point.x, hit.point.y + em.cameraYOffset, hit.point.z);
         }
 
-        if (em.settings.camerasParent.childCount > 0)
+        if (em.camerasParent.childCount > 0)
         {
-            for (int i = 0; i < em.settings.camerasParent.childCount; i++)
+            for (int i = 0; i < em.camerasParent.childCount; i++)
             {
-                em.settings.camerasParent.GetChild(i).gameObject.SetActive(false);
+                em.camerasParent.GetChild(i).gameObject.SetActive(false);
             }
         }
 
-        cameraDummy.transform.SetParent(em.settings.camerasParent);
-        cameraDummy.name = "Camera (" + em.settings.camerasParent.childCount + ")";
+        cameraDummy.transform.SetParent(em.camerasParent);
+        cameraDummy.name = "Camera (" + em.camerasParent.childCount + ")";
         cameraDummy.transform.localEulerAngles = new Vector3(0f, cameraDummy.transform.localEulerAngles.y, 0f);
 
         em.currentActiveCamera = cameraDummy;
@@ -198,11 +198,11 @@ public class AdditionaMenuCommands : MonoBehaviour
     {
         EditingManager em = FindObjectOfType<EditingManager>();
 
-        if (em.settings.camerasParent.childCount < 2) return;
+        if (em.camerasParent.childCount < 2) return;
 
         if (em.currentActiveCamera == null)
         {
-            em.currentActiveCamera = em.settings.camerasParent.GetChild(0).gameObject;
+            em.currentActiveCamera = em.camerasParent.GetChild(0).gameObject;
             return;
         }
 
@@ -210,13 +210,13 @@ public class AdditionaMenuCommands : MonoBehaviour
 
         em.currentActiveCamera.SetActive(false);
 
-        if (index + 1 == em.settings.camerasParent.childCount)
+        if (index + 1 == em.camerasParent.childCount)
         {
-            em.currentActiveCamera = em.settings.camerasParent.GetChild(0).gameObject;
+            em.currentActiveCamera = em.camerasParent.GetChild(0).gameObject;
         }
         else
         {
-            em.currentActiveCamera = em.settings.camerasParent.GetChild(index + 1).gameObject;
+            em.currentActiveCamera = em.camerasParent.GetChild(index + 1).gameObject;
         }
 
         em.currentActiveCamera.SetActive(true);
