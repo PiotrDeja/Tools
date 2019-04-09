@@ -37,17 +37,7 @@ public class AdditionaMenuCommands : MonoBehaviour
             t.position = hit.point;
         }
     }
-
-    // Toggle View Perspective / Ortographic
-
-    [MenuItem("Tools/View/Toggle View (Perspective or Ortographic) %_1")]
-    static public void ToggleViewTypeOrtoOrPerspective()
-    {
-        SceneView.lastActiveSceneView.orthographic = !SceneView.lastActiveSceneView.orthographic;
-        SceneView.lastActiveSceneView.Repaint();
-    }
-
-
+    
     // Create a group from selection
 
     private static double renameDelay;
@@ -91,13 +81,15 @@ public class AdditionaMenuCommands : MonoBehaviour
 
     public static void WaitForRename()
     {
+        return;
+    
         if (EditorApplication.timeSinceStartup >= renameDelay)
         {
             EditorApplication.update -= WaitForRename;
             var type = typeof(EditorWindow).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
             var hierarchyWindow = EditorWindow.GetWindow(type);
             var rename = type.GetMethod("RenameGO", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            rename.Invoke(hierarchyWindow, null);
+            // rename.Invoke(hierarchyWindow, null);
         }
     }
 
