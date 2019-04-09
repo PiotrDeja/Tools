@@ -9,7 +9,7 @@ public class AdditionaMenuCommands : MonoBehaviour
     // Set null parent
 
     [MenuItem("Tools/Transform/Set Null Parent %#&q")]
-    static void SetNulllParent ()
+    static void SetNulllParent()
     {
 
         if (Selection.activeGameObject == null)
@@ -18,7 +18,7 @@ public class AdditionaMenuCommands : MonoBehaviour
         Transform t = Selection.activeGameObject.transform;
         t.parent = null;
         t.SetSiblingIndex(0);
- 
+
     }
 
     // Align with ground
@@ -59,7 +59,7 @@ public class AdditionaMenuCommands : MonoBehaviour
         GameObject[] selectedObjects = Selection.gameObjects;
         if (selectedObjects.Length == 0) return;
 
-        GameObject newGroup = new GameObject("UNNAMED GROUP", typeof(SelectionGroup));
+        GameObject newGroup = new GameObject("UNNAMED GROUP");
         Vector3 center = Vector3.zero;
         for (int i = 0; i < selectedObjects.Length; i++)
         {
@@ -132,7 +132,7 @@ public class AdditionaMenuCommands : MonoBehaviour
 
         Selection.activeGameObject = newParent;
 
-        StartWaitingForRename(em.settings.delayToRename);
+        StartWaitingForRename(em.delayToRename);
     }
 
     // Create a new object and parent selected object to it
